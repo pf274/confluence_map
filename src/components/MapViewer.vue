@@ -4,7 +4,7 @@ import OpenSeadragon from 'openseadragon'
 
 const props = withDefaults(
   defineProps<{
-    tileSource: string
+    tileSource?: string
   }>(),
   {
     tileSource: '/tiles/big_map.dzi',
