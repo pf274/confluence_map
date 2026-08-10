@@ -1,0 +1,74 @@
+name: Save POIs
+
+# Publishes points of interest copied from the site's "save" modal. Paste
+# the compact JSON blob (from the "Copy to Clipboard" button) into the
+# pois_json input below and run this workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pois_json:
+        description: 'JSON copied from the site''s save-POIs modal'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  save-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate and write POIs
+        # The input is passed via env (not interpolated directly into the
+        # script) so its contents are treated as data, not shell code.
+        env:
+          POIS_JSON: ${{ inputs.pois_json }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const data = JSON.parse(process.env.POIS_JSON);
+            if (!Array.isArray(data)) throw new Error('Expected a JSON array of POIs');
+            fs.writeFileSync('src/data/pois.json', JSON.stringify(data, null, 2) + '\n');
+          "
+
+      - name: Commit updated POIs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/pois.json
+          if git diff --cached --quiet; then
+            echo "No POI changes."
+          else
+            git commit -m "Update points of interest"
+            git push
+          fi
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

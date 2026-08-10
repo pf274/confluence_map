@@ -7,6 +7,10 @@ pyramid (`public/tiles/`) and displayed with [OpenSeadragon](https://openseadrag
 so the browser only ever loads the tiles visible at the current pan/zoom level instead of the
 full-resolution image.
 
+Visitors can also drop points of interest on the map — right-click a blank spot to create one,
+click an existing marker to view or edit it. See [Points of interest](#points-of-interest) below
+for how those changes get published.
+
 ## Requirements
 
 Node 22+ (Vite 8 / rolldown's optional native bindings won't install correctly on Node 21).
@@ -30,9 +34,27 @@ npm run tiles
 This overwrites `public/tiles/`, which **is** committed — that's what the deployed site serves.
 Commit and push it like any other change to trigger a deploy (see below).
 
+## Points of interest
+
+Points of interest live in [src/data/pois.json](src/data/pois.json), bundled into the site at
+build time — there's no backend. Editing happens client-side and is published through a GitHub
+Action:
+
+- **Right-click** a blank spot on the map to create a new POI; **click** an existing marker to
+  view it, with an **Edit** button to change its title/description/visibility threshold.
+- Saved changes are held locally (in `localStorage`, so a refresh won't lose them) until you
+  publish them. A pencil icon appears in the bottom-right once there's at least one unpublished
+  change, badged with the count.
+- Clicking the pencil opens a **Copy to Clipboard** modal. Copying hands off to GitHub — see
+  `save-pois.yml` below — and clears the local pending changes.
+
+Note that running a GitHub Action requires repo write access, so in practice this is a "friends
+propose edits, you paste them in and run the Action" flow rather than something every visitor can
+complete themselves.
+
 ## GitHub Actions
 
-Two workflows handle deployment, covering the two ways you'll change this site.
+Three workflows handle deployment, covering the ways you'll change this site.
 
 ### [deploy.yml](.github/workflows/deploy.yml) — deploy on push
 
@@ -56,3 +78,10 @@ this workflow pulls it from a GitHub Release asset instead:
 That single run downloads the asset, runs `npm run tiles`, commits the regenerated
 `public/tiles/`, builds, and deploys — it does not rely on `deploy.yml` picking up its commit,
 since a push made by a workflow's own token doesn't trigger other workflows.
+
+### [save-pois.yml](.github/workflows/save-pois.yml) — publish points of interest
+
+Paste the JSON copied from the site's save modal (see [Points of interest](#points-of-interest)
+above) into **Actions → Save POIs → Run workflow**'s `pois_json` field and run it. It validates
+and writes `src/data/pois.json`, commits, builds, and deploys — same self-contained shape as
+`update-map.yml`, for the same reason.
