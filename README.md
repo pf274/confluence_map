@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-## Regenerating tiles
+## Regenerating tiles locally
 
 If `big_map.png` changes, regenerate the tile pyramid (requires the source PNG to exist at the
 repo root — it isn't committed, since at 104MB it's over GitHub's 100MB file-size limit):
@@ -28,22 +28,31 @@ npm run tiles
 ```
 
 This overwrites `public/tiles/`, which **is** committed — that's what the deployed site serves.
+Commit and push it like any other change to trigger a deploy (see below).
 
-## Deployment
+## GitHub Actions
 
-Pushes to `main` build and deploy automatically to GitHub Pages via
-[.github/workflows/deploy.yml](.github/workflows/deploy.yml).
+Two workflows handle deployment, covering the two ways you'll change this site.
 
-## Updating the map remotely (no local machine needed)
+### [deploy.yml](.github/workflows/deploy.yml) — deploy on push
 
-[.github/workflows/update-map.yml](.github/workflows/update-map.yml) regenerates the tiles and
-deploys from just a browser:
+Runs automatically on every push to `main`. Builds the site with `npm run build` and publishes
+`dist/` to GitHub Pages. This is what fires for ordinary code changes (or after you've committed
+regenerated tiles yourself, per the section above) — you don't need to do anything beyond
+`git push`.
+
+### [update-map.yml](.github/workflows/update-map.yml) — update the map from a browser
+
+For replacing the map image itself without a local checkout — e.g. from a phone or someone
+else's machine. `big_map.png` is too large to pass as a workflow input or commit directly, so
+this workflow pulls it from a GitHub Release asset instead:
 
 1. Go to the repo's **Releases** page and create (or edit) a release, dragging the new
    `big_map.png` in as an asset. The default tag this workflow looks for is `map-source` — reuse
-   that same release/tag each time so you don't have to specify it.
+   that same release/tag every time so you don't have to specify it in step 2.
 2. Go to **Actions → Update Map from Release → Run workflow**, optionally overriding the release
    tag, and run it.
 
-The workflow downloads the asset, runs `npm run tiles`, commits the regenerated `public/tiles/`,
-and deploys — all in one run.
+That single run downloads the asset, runs `npm run tiles`, commits the regenerated
+`public/tiles/`, builds, and deploys — it does not rely on `deploy.yml` picking up its commit,
+since a push made by a workflow's own token doesn't trigger other workflows.
