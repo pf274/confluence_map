@@ -1,0 +1,29 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Full-res source map (104MB, over GitHub's 100MB file limit).
+# The generated tile pyramid in public/tiles/ (regenerate with `npm run tiles`)
+# IS committed, since that's what the deployed site actually serves.
+/big_map.png
