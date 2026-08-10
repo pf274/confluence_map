@@ -7,7 +7,7 @@ const props = withDefaults(
     tileSource?: string
   }>(),
   {
-    tileSource: '/tiles/big_map.dzi',
+    tileSource: `${import.meta.env.BASE_URL}tiles/big_map.dzi`,
   },
 )
 
@@ -18,7 +18,7 @@ onMounted(() => {
   viewer = OpenSeadragon({
     element: container.value!,
     tileSources: props.tileSource,
-    prefixUrl: '/openseadragon-images/',
+    prefixUrl: `${import.meta.env.BASE_URL}openseadragon-images/`,
     showNavigator: true,
     navigatorPosition: 'BOTTOM_RIGHT',
     animationTime: 0.5,
