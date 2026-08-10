@@ -1,0 +1,76 @@
+name: Update Map from Release
+
+# Regenerates the tile pyramid from a big_map.png attached to a GitHub
+# Release, commits the new tiles, and deploys — all without needing git
+# or npm on your own machine.
+#
+# To use: upload the new big_map.png as an asset on a GitHub Release
+# (create one, or edit an existing one, and drag the file in), then run
+# this workflow from the Actions tab with that release's tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag of the GitHub Release containing the big_map.png asset'
+        required: true
+        default: map-source
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download big_map.png from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.release_tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern 'big_map.png' \
+            --clobber
+
+      - run: npm run tiles
+
+      - name: Commit regenerated tiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/tiles
+          if git diff --cached --quiet; then
+            echo "No tile changes."
+          else
+            git commit -m "Update map tiles from release ${{ inputs.release_tag }}"
+            git push
+          fi
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

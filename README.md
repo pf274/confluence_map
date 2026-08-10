@@ -33,3 +33,17 @@ This overwrites `public/tiles/`, which **is** committed — that's what the depl
 
 Pushes to `main` build and deploy automatically to GitHub Pages via
 [.github/workflows/deploy.yml](.github/workflows/deploy.yml).
+
+## Updating the map remotely (no local machine needed)
+
+[.github/workflows/update-map.yml](.github/workflows/update-map.yml) regenerates the tiles and
+deploys from just a browser:
+
+1. Go to the repo's **Releases** page and create (or edit) a release, dragging the new
+   `big_map.png` in as an asset. The default tag this workflow looks for is `map-source` — reuse
+   that same release/tag each time so you don't have to specify it.
+2. Go to **Actions → Update Map from Release → Run workflow**, optionally overriding the release
+   tag, and run it.
+
+The workflow downloads the asset, runs `npm run tiles`, commits the regenerated `public/tiles/`,
+and deploys — all in one run.
