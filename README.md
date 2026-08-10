@@ -37,24 +37,34 @@ Commit and push it like any other change to trigger a deploy (see below).
 ## Points of interest
 
 Points of interest live in [src/data/pois.json](src/data/pois.json), bundled into the site at
-build time — there's no backend. Editing happens client-side and is published through a GitHub
-Action:
+build time — there's no backend. Editing happens client-side and is published through GitHub
+Actions:
 
-- **Right-click** a blank spot on the map to create a new POI; **click** an existing marker to
-  view it, with an **Edit** button to change its title/description/visibility threshold.
+- **Right-click** a blank spot on the map to create a new POI; **click** an existing marker
+  (hover it to see its title) to view it, with an **Edit** button to change its title,
+  description, visibility threshold, image, or delete it.
+- The **Hide POIs / Show POIs** button in the left control stack toggles marker visibility for
+  the current session (doesn't affect what's published).
+- Attaching an image resizes/compresses it client-side (to fit GitHub's ~64KB limit on a
+  workflow input — see below) and previews immediately; the image displays next to the
+  title/description when viewing that POI.
 - Saved changes are held locally (in `localStorage`, so a refresh won't lose them) until you
-  publish them. A pencil icon appears in the bottom-right once there's at least one unpublished
-  change, badged with the count.
-- Clicking the pencil opens a **Copy to Clipboard** modal. Copying hands off to GitHub — see
-  `save-pois.yml` below — and clears the local pending changes.
+  publish them. A pencil icon appears in the left control stack once there's at least one
+  unpublished change, badged with the count.
+- Clicking the pencil opens a publish modal listing anything that needs copying: one **Copy
+  image data** button per pending image, plus a **Copy POI data** button for the batch of
+  title/description/location/deletion changes. **Done** clears the local pending state — it
+  hands off to the GitHub Actions below from that point on.
 
-Note that running a GitHub Action requires repo write access, so in practice this is a "friends
-propose edits, you paste them in and run the Action" flow rather than something every visitor can
-complete themselves.
+Deleting a POI is a soft delete client-side (`deleted: true`) so the pending change survives
+until published; the Save POIs Action is what actually removes it (and its image, if any) from
+`pois.json`. Note that running a GitHub Action requires repo write access, so in practice this is
+a "friends propose edits, you paste them in and run the Action" flow rather than something every
+visitor can complete themselves.
 
 ## GitHub Actions
 
-Three workflows handle deployment, covering the ways you'll change this site.
+Four workflows handle deployment, covering the ways you'll change this site.
 
 ### [deploy.yml](.github/workflows/deploy.yml) — deploy on push
 
@@ -79,9 +89,23 @@ That single run downloads the asset, runs `npm run tiles`, commits the regenerat
 `public/tiles/`, builds, and deploys — it does not rely on `deploy.yml` picking up its commit,
 since a push made by a workflow's own token doesn't trigger other workflows.
 
-### [save-pois.yml](.github/workflows/save-pois.yml) — publish points of interest
+### [save-pois.yml](.github/workflows/save-pois.yml) — publish POI changes
 
-Paste the JSON copied from the site's save modal (see [Points of interest](#points-of-interest)
-above) into **Actions → Save POIs → Run workflow**'s `pois_json` field and run it. It validates
-and writes `src/data/pois.json`, commits, builds, and deploys — same self-contained shape as
+Paste the JSON copied from the site's publish modal (see [Points of interest](#points-of-interest)
+above) into **Actions → Save POIs → Run workflow**'s `pois_json` field and run it. It strips out
+any entries marked `deleted: true`, deletes the `poi-images/` file for any image no longer
+referenced by a surviving POI (whether from a deletion or an image swap), writes
+`src/data/pois.json`, commits, builds, and deploys — same self-contained shape as
 `update-map.yml`, for the same reason.
+
+If a POI has a new image, run **Save POI Image** (below) for it too — order doesn't strictly
+matter, but running the image first avoids a brief window where `pois.json` references an image
+that isn't committed yet.
+
+### [save-poi-image.yml](.github/workflows/save-poi-image.yml) — publish one POI image
+
+Run once per pending image: paste its id and data URL (both shown in the site's publish modal)
+into **Actions → Save POI Image → Run workflow**'s `image_id` and `image_data_url` fields. It
+decodes the data URL, re-compresses/resizes it server-side via `sharp` as a consistency check
+independent of whatever the browser produced, writes `public/poi-images/<image_id>.jpg`, commits,
+builds, and deploys.

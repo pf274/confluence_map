@@ -58,11 +58,13 @@ function updateMaxZoomLevel() {
 
 // --- Points of interest -----------------------------------------------
 
-const { pois, dirtyCount, savePoi, createDraftPoi, publishAndClear } = usePois()
+const { pois, dirtyCount, savePoi, createDraftPoi, poisJson, pendingImagesList, clearPublished } =
+  usePois()
 
 const selectedPoi = ref<Poi | null>(null)
 const selectedIsNewDraft = ref(false)
 const showSaveModal = ref(false)
+const poisVisible = ref(true)
 
 const markerElements = new Map<string, HTMLElement>()
 
@@ -106,7 +108,8 @@ function syncMarkers() {
       })
     }
     el.title = poi.title || 'Untitled'
-    el.style.display = zoomPercent.value >= poi.min_zoom_visible ? '' : 'none'
+    const visible = poisVisible.value && zoomPercent.value >= poi.min_zoom_visible
+    el.style.display = visible ? '' : 'none'
   }
   for (const [id, el] of markerElements) {
     if (!seen.has(id)) {
@@ -117,6 +120,7 @@ function syncMarkers() {
 }
 
 watch(pois, syncMarkers)
+watch(poisVisible, syncMarkers)
 
 function onContextMenu(event: MouseEvent) {
   event.preventDefault()
@@ -137,6 +141,11 @@ function handlePanelSave(poi: Poi) {
 
 function handlePanelClose() {
   selectedPoi.value = null
+}
+
+function handlePublishDone() {
+  clearPublished()
+  showSaveModal.value = false
 }
 
 // --- Setup --------------------------------------------------------------
@@ -191,6 +200,10 @@ onUnmounted(() => {
       <button ref="zoomOutButton" type="button" class="control-btn">−</button>
       <button ref="homeButton" type="button" class="control-btn">Home</button>
       <button ref="fullPageButton" type="button" class="control-btn">Full</button>
+      <button type="button" class="control-btn wide-btn" @click="poisVisible = !poisVisible">
+        {{ poisVisible ? 'Hide POIs' : 'Show POIs' }}
+      </button>
+      <PoiSaveButton class="control-btn" :count="dirtyCount" @click="showSaveModal = true" />
     </div>
     <div class="zoom-readout">
       <span class="zoom-readout-label">{{ zoomPercent }}%</span>
@@ -198,7 +211,6 @@ onUnmounted(() => {
         <div class="zoom-readout-bar-fill" :style="{ width: zoomProgress + '%' }" />
       </div>
     </div>
-    <PoiSaveButton :count="dirtyCount" @click="showSaveModal = true" />
     <PoiDetailPanel
       v-if="selectedPoi"
       :poi="selectedPoi"
@@ -207,7 +219,13 @@ onUnmounted(() => {
       @save="handlePanelSave"
       @close="handlePanelClose"
     />
-    <PoiSaveModal v-if="showSaveModal" :publish="publishAndClear" @close="showSaveModal = false" />
+    <PoiSaveModal
+      v-if="showSaveModal"
+      :pois-json="poisJson"
+      :images="pendingImagesList"
+      @done="handlePublishDone"
+      @cancel="showSaveModal = false"
+    />
   </div>
 </template>
 
@@ -256,6 +274,12 @@ onUnmounted(() => {
 
 .control-btn:active {
   background: rgba(60, 60, 68, 0.8);
+}
+
+.wide-btn {
+  width: auto;
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 .zoom-readout {

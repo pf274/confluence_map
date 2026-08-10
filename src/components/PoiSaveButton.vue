@@ -17,25 +17,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .save-btn {
-  position: absolute;
-  bottom: 150px;
-  right: 16px;
-  z-index: 10;
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(20, 20, 24, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #f0f0f0;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.save-btn:hover {
-  background: rgba(40, 40, 46, 0.7);
-  border-color: rgba(255, 255, 255, 0.3);
+  position: relative;
 }
 
 .save-btn-icon {

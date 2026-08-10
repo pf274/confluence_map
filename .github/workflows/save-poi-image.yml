@@ -1,14 +1,17 @@
-name: Save POIs
+name: Save POI Image
 
-# Publishes points of interest copied from the site's "save" modal. Paste
-# the compact JSON blob (from the "Copy to Clipboard" button) into the
-# pois_json input below and run this workflow.
+# Publishes a single image copied from the site's save modal. Run this
+# once per pending image, pasting in its id and data URL.
 
 on:
   workflow_dispatch:
     inputs:
-      pois_json:
-        description: 'JSON copied from the site''s save-POIs modal'
+      image_id:
+        description: 'image_id (uuid) shown next to the image in the save modal'
+        required: true
+        type: string
+      image_data_url:
+        description: 'data:image/...;base64,... copied from the save modal'
         required: true
         type: string
 
@@ -37,22 +40,23 @@ jobs:
 
       - run: npm ci
 
-      - name: Apply POI changes and clean up orphaned images
-        # The input is passed via env (not interpolated directly into the
-        # script) so its contents are treated as data, not shell code.
+      - name: Decode, resize, and write image
+        # Passed via env (not interpolated directly into the script) so
+        # the input is treated as data, not shell code.
         env:
-          POIS_JSON: ${{ inputs.pois_json }}
-        run: node scripts/save-pois.mjs
+          IMAGE_ID: ${{ inputs.image_id }}
+          IMAGE_DATA_URL: ${{ inputs.image_data_url }}
+        run: node scripts/save-poi-image.mjs
 
-      - name: Commit updated POIs
+      - name: Commit image
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/data/pois.json public/poi-images
+          git add public/poi-images
           if git diff --cached --quiet; then
-            echo "No POI changes."
+            echo "No image changes."
           else
-            git commit -m "Update points of interest"
+            git commit -m "Add/update POI image ${{ inputs.image_id }}"
             git push
           fi
 

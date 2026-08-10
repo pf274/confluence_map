@@ -1,63 +1,78 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { PendingImage } from '../composables/usePois'
 
-const props = defineProps<{
-  publish: () => string
+defineProps<{
+  poisJson: string
+  images: PendingImage[]
 }>()
 
 const emit = defineEmits<{
-  close: []
+  done: []
+  cancel: []
 }>()
 
-const copied = ref(false)
-const copyFailed = ref(false)
+const poisCopied = ref(false)
+const copiedImageIds = ref(new Set<string>())
+const copyError = ref(false)
 
-async function copyToClipboard() {
-  const json = props.publish()
+async function copyPois(json: string) {
   try {
     await navigator.clipboard.writeText(json)
-    copied.value = true
+    poisCopied.value = true
   } catch {
-    copyFailed.value = true
+    copyError.value = true
+  }
+}
+
+async function copyImage(image: PendingImage) {
+  try {
+    await navigator.clipboard.writeText(image.dataUrl)
+    copiedImageIds.value = new Set(copiedImageIds.value).add(image.id)
+  } catch {
+    copyError.value = true
   }
 }
 </script>
 
 <template>
-  <div class="backdrop" @click.self="emit('close')">
+  <div class="backdrop" @click.self="emit('cancel')">
     <div class="panel">
-      <template v-if="!copied && !copyFailed">
-        <h2 class="title">Publish points of interest</h2>
+      <h2 class="title">Publish changes</h2>
+
+      <div v-if="images.length > 0" class="section">
         <p class="body">
-          Copy the updated list, then paste it into the <strong>pois_json</strong> field of the
+          Run <strong>Save POI Image</strong> once per image below, pasting in its id and data.
+        </p>
+        <div v-for="image in images" :key="image.id" class="image-row">
+          <img :src="image.dataUrl" class="image-thumb" alt="" />
+          <div class="image-row-info">
+            <code class="image-id">{{ image.id }}</code>
+            <button type="button" class="btn" @click="copyImage(image)">
+              {{ copiedImageIds.has(image.id) ? 'Copied!' : 'Copy image data' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="body">
+          Copy the POI data, then paste it into the <strong>pois_json</strong> field of the
           <strong>Save POIs</strong> GitHub Action to publish it.
         </p>
-        <div class="actions">
-          <button type="button" class="btn" @click="emit('close')">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="copyToClipboard">
-            Copy to Clipboard
-          </button>
-        </div>
-      </template>
-      <template v-else-if="copied">
-        <h2 class="title">Copied!</h2>
-        <p class="body">
-          Now go to <strong>Actions → Save POIs → Run workflow</strong> on GitHub and paste it in.
-        </p>
-        <div class="actions">
-          <button type="button" class="btn btn-primary" @click="emit('close')">Done</button>
-        </div>
-      </template>
-      <template v-else>
-        <h2 class="title">Couldn't access the clipboard</h2>
-        <p class="body">Your browser blocked the clipboard write. Try again or copy manually.</p>
-        <div class="actions">
-          <button type="button" class="btn" @click="emit('close')">Close</button>
-          <button type="button" class="btn btn-primary" @click="copyToClipboard">
-            Try Again
-          </button>
-        </div>
-      </template>
+        <button type="button" class="btn btn-primary" @click="copyPois(poisJson)">
+          {{ poisCopied ? 'Copied!' : 'Copy POI data' }}
+        </button>
+      </div>
+
+      <p v-if="copyError" class="error">
+        Your browser blocked the clipboard write. Try clicking the copy button again.
+      </p>
+
+      <div class="actions">
+        <button type="button" class="btn" @click="emit('cancel')">Cancel</button>
+        <button type="button" class="btn btn-primary" @click="emit('done')">Done</button>
+      </div>
     </div>
   </div>
 </template>
@@ -74,7 +89,9 @@ async function copyToClipboard() {
 }
 
 .panel {
-  width: min(360px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   padding: 20px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -86,14 +103,61 @@ async function copyToClipboard() {
 }
 
 .title {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-size: 18px;
   font-weight: 600;
 }
 
+.section {
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
 .body {
-  margin: 0;
+  margin: 0 0 10px;
   color: #d0d0d0;
+}
+
+.image-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.image-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex: 0 0 auto;
+}
+
+.image-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.image-id {
+  font-size: 11px;
+  color: #a0a0a0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #ff8a80;
 }
 
 .actions {
