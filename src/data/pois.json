@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "d2fcb256-81b4-4f5c-a280-6005129bc76c",
+    "title": "Tagnarus, Capitol of The Confluence",
+    "description": "This is a test description. Blah blee bloo. :P",
+    "location": {
+      "x": 8081,
+      "y": 7569
+    },
+    "min_zoom_visible": 100
+  }
+]
