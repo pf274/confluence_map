@@ -2,11 +2,12 @@
   {
     "id": "d2fcb256-81b4-4f5c-a280-6005129bc76c",
     "title": "Tagnarus, Capitol of The Confluence",
-    "description": "This is a test description. Blah blee bloo. :P",
+    "description": "Center of Life in The Confluence, Tagnarus is a large, sprawling city full of people from all over the continent. People here tend to be a mix of the most and least religious citizens of The Confluence due to the constant presence of Empress Katressa, who dwells in her palace in Tagnarus.",
     "location": {
       "x": 8081,
       "y": 7569
     },
-    "min_zoom_visible": 100
+    "min_zoom_visible": 100,
+    "image_id": "e1b16a58-2cfa-4e36-b9bb-5bd877eb28c9"
   }
 ]
